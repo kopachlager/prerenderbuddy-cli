@@ -1,0 +1,42 @@
+{
+  "name": "@prerenderbuddy/cli",
+  "version": "0.1.0",
+  "description": "Open-source crawler-readability and discovery-file diagnostics for public websites.",
+  "type": "module",
+  "bin": {
+    "prerenderbuddy": "./bin/prerenderbuddy.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "LICENSE",
+    "NOTICE",
+    "README.md",
+    "SECURITY.md"
+  ],
+  "scripts": {
+    "check": "node --check bin/prerenderbuddy.js && node --check src/*.js",
+    "test": "node --test",
+    "test:coverage": "node --test --experimental-test-coverage",
+    "pack:check": "npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "crawler",
+    "javascript-seo",
+    "prerendering",
+    "robots.txt",
+    "sitemap",
+    "llms.txt",
+    "cli"
+  ],
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  }
+}

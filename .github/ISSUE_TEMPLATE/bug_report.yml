@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible diagnostic or CLI problem.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, private URLs, customer data, or security vulnerabilities. Follow SECURITY.md for sensitive reports.
+  - type: input
+    id: version
+    attributes:
+      label: CLI and Node.js versions
+      placeholder: "@prerenderbuddy/cli 0.1.0; Node.js 22.x"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command and public reproduction
+      description: Remove tokens, private domains, and personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: false_positive
+    attributes:
+      label: False-positive or compatibility considerations
