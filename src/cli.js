@@ -1,8 +1,13 @@
+import { readFileSync } from 'node:fs';
 import { checkUrl } from './check.js';
 import { compareUrl } from './compare.js';
 import { checkDiscoveryFiles } from './discovery.js';
 import { formatHuman } from './format.js';
 import { USER_AGENT_PROFILES } from './profiles.js';
+
+const { version: VERSION } = JSON.parse(
+  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+);
 
 const HELP = `Prerender Buddy CLI
 
@@ -64,7 +69,7 @@ export async function runCli(args) {
     return;
   }
   if (options.version) {
-    process.stdout.write('0.1.0\n');
+    process.stdout.write(`${VERSION}\n`);
     return;
   }
 
