@@ -10,6 +10,8 @@ Open-source diagnostics for checking what public websites return to crawlers.
 
 The CLI inspects returned HTML, compares standard and crawler user-agent HTTP responses, and validates common discovery files. It does not render JavaScript, change a website, require a Prerender Buddy account, or predict search rankings, indexing, AI citations, mentions, or traffic.
 
+Using an AI assistant? The [`prerenderbuddy-mcp`](https://github.com/kopachlager/prerenderbuddy-mcp) repository exposes these diagnostics through a local stdio MCP server. See the [Prerender Buddy tools overview](https://prerenderbuddy.com/developer-tools) to compare the CLI, MCP server, Chrome extension, and managed service.
+
 Run it without installing:
 
 ```bash
@@ -241,6 +243,8 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md). Keep contributions focused on accurat
 
 ## Next steps
 
+- Use the [MCP server](https://github.com/kopachlager/prerenderbuddy-mcp) with compatible AI assistants.
+- Compare all [Prerender Buddy developer tools](https://prerenderbuddy.com/developer-tools).
 - Run the [browser-based crawler checker](https://prerenderbuddy.com/tools/bot-view-checker).
 - Read the [technical documentation](https://prerenderbuddy.com/docs).
 - Review the [public roadmap](./ROADMAP.md).
