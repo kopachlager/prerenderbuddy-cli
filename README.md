@@ -4,25 +4,27 @@ Open-source diagnostics for checking what public websites return to crawlers.
 
 The CLI inspects returned HTML, compares browser-style and crawler-style responses, and validates common discovery files. It does not render JavaScript, change a website, require a Prerender Buddy account, or predict search rankings, indexing, AI citations, mentions, or traffic.
 
-This is an early public release. The npm package is being prepared; until it is published, run the CLI from a local checkout.
+This is an early public release. Install it from npm or run it from a local checkout.
 
 ## Requirements
 
 - Node.js 20 or newer
 - A public HTTP or HTTPS URL
 
-Local usage:
+Run without installing:
+
+```bash
+npx @prerenderbuddy/cli check https://example.com
+npx @prerenderbuddy/cli compare https://example.com --user-agent gptbot
+npx @prerenderbuddy/cli files https://example.com
+```
+
+Local checkout usage:
 
 ```bash
 node ./bin/prerenderbuddy.js check https://example.com
 node ./bin/prerenderbuddy.js compare https://example.com --user-agent gptbot
 node ./bin/prerenderbuddy.js files https://example.com
-```
-
-Proposed usage after publication:
-
-```bash
-npx @prerenderbuddy/cli check https://example.com
 ```
 
 ## Commands
