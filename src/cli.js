@@ -20,7 +20,8 @@ Options:
   --user-agent <name>       browser, googlebot, bingbot, gptbot, or claudebot
   --timeout <milliseconds>  request timeout from 1000 to 60000 (default: 15000)
   --text-ratio-threshold <number>
-                            compare text-volume tolerance from 0.01 to 0.99 (default: 0.30)
+                            compare command only; text-volume tolerance from 0.01 to 0.99
+                            (default: 0.30)
   --json                    print machine-readable JSON
   --fail-on <level>         warning or critical
   --help                    show this help
@@ -42,6 +43,7 @@ function parseArgs(args) {
     userAgent: 'googlebot',
     timeoutMs: 15_000,
     textRatioThreshold: 0.3,
+    textRatioThresholdProvided: false,
     json: false,
     failOn: null,
   };
@@ -56,6 +58,7 @@ function parseArgs(args) {
     else if (value === '--timeout') options.timeoutMs = Number(optionValue(args, index++, value));
     else if (value === '--text-ratio-threshold') {
       options.textRatioThreshold = Number(optionValue(args, index++, value));
+      options.textRatioThresholdProvided = true;
     } else if (value === '--fail-on') options.failOn = optionValue(args, index++, value);
     else if (value.startsWith('-')) throw new Error(`Unknown option "${value}".`);
     else positional.push(value);
@@ -114,6 +117,9 @@ export async function runCliWithRuntime(args, runtime = {}) {
   }
   if (!url) throw new Error(`The ${command} command requires a URL.`);
   if (positional.length > 2) throw new Error('Only one URL can be checked at a time in v0.1.');
+  if (options.textRatioThresholdProvided && command !== 'compare') {
+    throw new Error('--text-ratio-threshold is supported by the compare command only.');
+  }
 
   const runOptions = {
     userAgent: options.userAgent,
@@ -132,7 +138,7 @@ export function executionErrorResult(error) {
     ? 'timeout'
     : /private|blocked network|local and private|credentials|only http and https/i.test(message)
       ? 'unsafe_target'
-      : /unknown|requires|must be|only one URL|public URL is required|invalid url/i.test(message)
+      : /unknown|requires|must be|only one URL|compare command only|public URL is required|invalid url/i.test(message)
         ? 'invalid_input'
         : 'request_failed';
   return {

@@ -11,7 +11,7 @@ import {
 
 test('parses common CI options', () => {
   const result = parseArgs([
-    'check',
+    'compare',
     'https://example.com',
     '--user-agent',
     'gptbot',
@@ -24,18 +24,19 @@ test('parses common CI options', () => {
     '0.2',
   ]);
 
-  assert.deepEqual(result.positional, ['check', 'https://example.com']);
+  assert.deepEqual(result.positional, ['compare', 'https://example.com']);
   assert.equal(result.options.userAgent, 'gptbot');
   assert.equal(result.options.timeoutMs, 5000);
   assert.equal(result.options.json, true);
   assert.equal(result.options.failOn, 'critical');
   assert.equal(result.options.textRatioThreshold, 0.2);
+  assert.equal(result.options.textRatioThresholdProvided, true);
 });
 
 test('rejects unsafe timeout and failure threshold values', () => {
   assert.throws(() => parseArgs(['check', 'example.com', '--timeout', '10']), /between 1000 and 60000/);
   assert.throws(() => parseArgs(['check', 'example.com', '--fail-on', 'pass']), /warning or critical/);
-  assert.throws(() => parseArgs(['check', 'example.com', '--text-ratio-threshold', '2']), /between 0.01 and 0.99/);
+  assert.throws(() => parseArgs(['compare', 'example.com', '--text-ratio-threshold', '2']), /between 0.01 and 0.99/);
   assert.throws(() => parseArgs(['check', 'example.com', '--user-agent']), /requires a value/);
   assert.throws(() => parseArgs(['check', 'example.com', '--user-agent', 'unknown']), /Unknown user-agent/);
   assert.throws(() => parseArgs(['check', 'example.com', '--unknown']), /Unknown option/);
@@ -102,6 +103,15 @@ test('passes compare thresholds to the command handler', async () => {
   assert.equal(received.textRatioThreshold, 0.15);
 });
 
+test('rejects the compare-only text ratio option for check and files', async () => {
+  for (const command of ['check', 'files']) {
+    await assert.rejects(
+      () => runCli([command, 'https://example.com', '--text-ratio-threshold', '0.2']),
+      /compare command only/,
+    );
+  }
+});
+
 test('rejects invalid commands, missing URLs, and extra positional arguments', async () => {
   await assert.rejects(() => runCli(['unknown', 'https://example.com']), /Unknown command/);
   await assert.rejects(() => runCli(['check']), /requires a URL/);
@@ -140,4 +150,30 @@ test('the executable keeps human execution errors on stderr', () => {
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
   assert.match(result.stderr, /Prerender Buddy check failed: Unknown command/);
+});
+
+test('unsupported compare options produce JSON and human execution errors', () => {
+  const binary = fileURLToPath(new URL('../bin/prerenderbuddy.js', import.meta.url));
+  const json = spawnSync(process.execPath, [
+    binary,
+    'check',
+    'https://example.com',
+    '--text-ratio-threshold',
+    '0.2',
+    '--json',
+  ], { encoding: 'utf8' });
+  assert.equal(json.status, 2);
+  assert.equal(json.stderr, '');
+  assert.equal(JSON.parse(json.stdout).error.code, 'invalid_input');
+
+  const human = spawnSync(process.execPath, [
+    binary,
+    'files',
+    'https://example.com',
+    '--text-ratio-threshold',
+    '0.2',
+  ], { encoding: 'utf8' });
+  assert.equal(human.status, 2);
+  assert.equal(human.stdout, '');
+  assert.match(human.stderr, /compare command only/);
 });

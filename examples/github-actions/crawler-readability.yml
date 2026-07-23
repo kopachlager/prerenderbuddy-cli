@@ -20,20 +20,20 @@ jobs:
 
       - name: Check crawler-readable HTML
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.2
+          npx --yes @prerenderbuddy/cli@0.1.3
           check "$SITE_URL"
           --user-agent googlebot
           --fail-on critical
 
       - name: Compare standard and AI crawler HTTP responses
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.2
+          npx --yes @prerenderbuddy/cli@0.1.3
           compare "$SITE_URL"
           --user-agent gptbot
           --fail-on critical
 
       - name: Validate discovery files
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.2
+          npx --yes @prerenderbuddy/cli@0.1.3
           files "$SITE_URL"
           --fail-on critical
