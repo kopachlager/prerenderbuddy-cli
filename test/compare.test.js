@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { compareUrl, contentDelta } from '../src/compare.js';
+import { formatHuman } from '../src/format.js';
 import { analyzeHtml } from '../src/html.js';
 
 async function fixture(name) {
@@ -51,6 +52,10 @@ test('reports exact metadata and text-volume differences separately', async () =
   assert.ok(result.issues.some((issue) => (
     issue.code === 'crawler_response_differs' && issue.compatibilityAlias
   )));
+  assert.match(JSON.stringify(result), /crawler_response_differs/);
+  const human = formatHuman(result);
+  assert.match(human, /text_volume_differs/);
+  assert.doesNotMatch(human, /crawler_response_differs/);
 });
 
 test('status differences and crawler app shells remain critical', async () => {

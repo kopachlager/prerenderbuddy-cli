@@ -7,9 +7,38 @@ export async function readBoundedText(response, maxChars = DEFAULT_MAX_CHARS) {
   return (await readBoundedResult(response, maxChars)).text;
 }
 
-async function readBoundedResult(response, maxChars = DEFAULT_MAX_CHARS) {
+function abortError() {
+  const error = new Error('The operation was aborted.');
+  error.name = 'AbortError';
+  return error;
+}
+
+async function waitForAbort(promise, signal) {
+  if (!signal) return promise;
+  if (signal.aborted) throw abortError();
+
+  let onAbort;
+  const aborted = new Promise((_, reject) => {
+    onAbort = () => reject(abortError());
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+
+  try {
+    return await Promise.race([promise, aborted]);
+  } finally {
+    signal.removeEventListener('abort', onAbort);
+  }
+}
+
+async function cancelBody(body, signal) {
+  if (!body) return;
+  const cancellation = body.cancel().catch(() => {});
+  await waitForAbort(cancellation, signal);
+}
+
+async function readBoundedResult(response, maxChars = DEFAULT_MAX_CHARS, signal) {
   if (!response.body) {
-    const text = await response.text();
+    const text = await waitForAbort(response.text(), signal);
     return { text: text.slice(0, maxChars), truncated: text.length > maxChars };
   }
 
@@ -20,7 +49,7 @@ async function readBoundedResult(response, maxChars = DEFAULT_MAX_CHARS) {
 
   try {
     while (output.length <= maxChars) {
-      const { done, value } = await reader.read();
+      const { done, value } = await waitForAbort(reader.read(), signal);
       if (done) {
         completed = true;
         break;
@@ -30,7 +59,11 @@ async function readBoundedResult(response, maxChars = DEFAULT_MAX_CHARS) {
     output += decoder.decode();
     return { text: output.slice(0, maxChars), truncated: output.length > maxChars };
   } finally {
-    if (!completed) await reader.cancel().catch(() => {});
+    if (!completed) {
+      const cancellation = reader.cancel().catch(() => {});
+      if (signal?.aborted) void cancellation;
+      else await waitForAbort(cancellation, signal);
+    }
     reader.releaseLock();
   }
 }
@@ -44,62 +77,65 @@ export async function fetchPublicText(target, options = {}) {
     maxRedirects = 5,
     fetchFn = fetch,
     assertUrlFn = assertPublicUrl,
+    setTimeoutFn = setTimeout,
+    clearTimeoutFn = clearTimeout,
   } = options;
 
   let currentUrl = normalizePublicUrl(target);
+  const controller = new AbortController();
+  const timeout = setTimeoutFn(() => controller.abort(), timeoutMs);
 
-  for (let redirects = 0; redirects <= maxRedirects; redirects += 1) {
-    await assertUrlFn(currentUrl);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    let response;
-
-    try {
-      response = await fetchFn(currentUrl, {
+  try {
+    for (let redirects = 0; redirects <= maxRedirects; redirects += 1) {
+      await waitForAbort(Promise.resolve().then(() => assertUrlFn(currentUrl)), controller.signal);
+      const response = await waitForAbort(fetchFn(currentUrl, {
         redirect: 'manual',
         signal: controller.signal,
         headers: {
           Accept: accept,
           'User-Agent': userAgent || 'PrerenderBuddyCLI/0.1 (+https://prerenderbuddy.com)',
         },
-      });
-    } catch (error) {
-      if (error?.name === 'AbortError') throw new Error(`Request timed out after ${timeoutMs} ms.`);
-      throw error;
-    } finally {
-      clearTimeout(timeout);
+      }), controller.signal);
+
+      if (!REDIRECT_CODES.has(response.status)) {
+        const body = await readBoundedResult(response, maxChars, controller.signal);
+        return {
+          requestedUrl: normalizePublicUrl(target),
+          finalUrl: currentUrl,
+          statusCode: response.status,
+          ok: response.ok,
+          contentType: response.headers.get('content-type') || '',
+          text: body.text,
+          truncated: body.truncated,
+          maxChars,
+        };
+      }
+
+      await cancelBody(response.body, controller.signal);
+      const location = response.headers.get('location');
+      if (!location) {
+        return {
+          requestedUrl: normalizePublicUrl(target),
+          finalUrl: currentUrl,
+          statusCode: response.status,
+          ok: response.ok,
+          contentType: response.headers.get('content-type') || '',
+          text: '',
+          truncated: false,
+          maxChars,
+        };
+      }
+      if (redirects === maxRedirects) throw new Error('Too many redirects while checking this URL.');
+      currentUrl = normalizePublicUrl(new URL(location, currentUrl).toString());
     }
 
-    if (!REDIRECT_CODES.has(response.status)) {
-      const body = await readBoundedResult(response, maxChars);
-      return {
-        requestedUrl: normalizePublicUrl(target),
-        finalUrl: currentUrl,
-        statusCode: response.status,
-        ok: response.ok,
-        contentType: response.headers.get('content-type') || '',
-        text: body.text,
-        truncated: body.truncated,
-        maxChars,
-      };
+    throw new Error('Too many redirects while checking this URL.');
+  } catch (error) {
+    if (controller.signal.aborted || error?.name === 'AbortError') {
+      throw new Error(`Request timed out after ${timeoutMs} ms.`);
     }
-
-    const location = response.headers.get('location');
-    if (!location) {
-      return {
-        requestedUrl: normalizePublicUrl(target),
-        finalUrl: currentUrl,
-        statusCode: response.status,
-        ok: response.ok,
-        contentType: response.headers.get('content-type') || '',
-        text: '',
-        truncated: false,
-        maxChars,
-      };
-    }
-    if (redirects === maxRedirects) throw new Error('Too many redirects while checking this URL.');
-    currentUrl = normalizePublicUrl(new URL(location, currentUrl).toString());
+    throw error;
+  } finally {
+    clearTimeoutFn(timeout);
   }
-
-  throw new Error('Too many redirects while checking this URL.');
 }
