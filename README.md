@@ -1,5 +1,11 @@
 # Prerender Buddy CLI
 
+[![npm version](https://img.shields.io/npm/v/%40prerenderbuddy%2Fcli?label=npm)](https://www.npmjs.com/package/@prerenderbuddy/cli)
+[![GitHub release](https://img.shields.io/github/v/release/kopachlager/prerenderbuddy-cli?label=release)](https://github.com/kopachlager/prerenderbuddy-cli/releases)
+[![CI](https://github.com/kopachlager/prerenderbuddy-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/kopachlager/prerenderbuddy-cli/actions/workflows/ci.yml)
+[![license](https://img.shields.io/npm/l/%40prerenderbuddy%2Fcli)](./LICENSE)
+[![Node.js](https://img.shields.io/node/v/%40prerenderbuddy%2Fcli)](./package.json)
+
 Open-source diagnostics for checking what public websites return to crawlers.
 
 The CLI inspects returned HTML, compares browser-style and crawler-style responses, and validates common discovery files. It does not render JavaScript, change a website, require a Prerender Buddy account, or predict search rankings, indexing, AI citations, mentions, or traffic.
@@ -94,6 +100,22 @@ Exit codes:
 - `2`: invalid input, unsafe target, timeout, or another execution error.
 
 JSON fields are intended to become stable at `1.0.0`. Before then, minor releases may add or refine diagnostic fields.
+
+### GitHub Actions
+
+Copy [`examples/github-actions/crawler-readability.yml`](https://github.com/kopachlager/prerenderbuddy-cli/blob/main/examples/github-actions/crawler-readability.yml)
+into the target repository as `.github/workflows/crawler-readability.yml`, then replace
+`https://example.com` with the production URL.
+
+The example:
+
+- checks crawler-readable HTML as Googlebot;
+- compares browser-style and GPTBot responses;
+- validates `robots.txt`, `sitemap.xml`, and `llms.txt`;
+- fails only on critical findings by default;
+- pins the CLI version so updates are reviewed deliberately.
+
+Run the workflow on pull requests, manually, or adapt its triggers to the deployment process.
 
 ## Safety and privacy
 
