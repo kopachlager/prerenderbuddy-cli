@@ -1,6 +1,6 @@
 {
   "name": "@prerenderbuddy/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Open-source crawler-readability and discovery-file diagnostics for public websites.",
   "homepage": "https://github.com/kopachlager/prerenderbuddy-cli#readme",
   "repository": {
