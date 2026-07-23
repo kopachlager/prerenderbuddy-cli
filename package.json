@@ -4,7 +4,7 @@
   "description": "Open-source crawler-readability and discovery-file diagnostics for public websites.",
   "type": "module",
   "bin": {
-    "prerenderbuddy": "./bin/prerenderbuddy.js"
+    "prerenderbuddy": "bin/prerenderbuddy.js"
   },
   "exports": {
     ".": "./src/index.js"
