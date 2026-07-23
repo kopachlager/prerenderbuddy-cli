@@ -2,9 +2,24 @@ function line(label, value) {
   return `${label.padEnd(18)} ${value ?? '—'}`;
 }
 
+function evidence(value) {
+  if (value === undefined) return '';
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+function formatIssue(issue) {
+  return [
+    `- ${issue.severity.toUpperCase()} [${issue.code}]: ${issue.message}`,
+    issue.why ? `  Why: ${issue.why}` : null,
+    issue.evidence !== undefined ? `  Evidence: ${evidence(issue.evidence)}` : null,
+    issue.nextStep ? `  Next: ${issue.nextStep}` : null,
+  ].filter(Boolean).join('\n');
+}
+
 function formatIssues(issues) {
   if (!issues.length) return '\nNo material issues detected by this check.';
-  return `\nIssues:\n${issues.map((issue) => `- ${issue.severity.toUpperCase()}: ${issue.message}`).join('\n')}`;
+  const visibleIssues = issues.filter((issue) => !issue.compatibilityAlias);
+  return `\nIssues:\n${visibleIssues.map(formatIssue).join('\n')}`;
 }
 
 export function formatHuman(result) {
@@ -30,12 +45,17 @@ export function formatHuman(result) {
       `Prerender Buddy · response comparison · ${result.summary.toUpperCase()}`,
       line('URL', result.url),
       line('Crawler profile', result.crawlerProfile.label),
-      line('Browser HTTP', result.browser.response.statusCode),
+      line('Standard HTTP', result.browser.response.statusCode),
       line('Crawler HTTP', result.crawler.response.statusCode),
-      line('Browser text', `${result.browser.html.textLength} characters`),
+      line('Standard text', `${result.browser.html.textLength} characters`),
       line('Crawler text', `${result.crawler.html.textLength} characters`),
       line('Text ratio', result.difference.textRatio),
+      line(
+        'Accepted ratio',
+        `${result.difference.acceptedTextRatio.minimum}–${result.difference.acceptedTextRatio.maximum}`,
+      ),
       line('Title changed', result.difference.titleChanged ? 'yes' : 'no'),
+      line('Description changed', result.difference.descriptionChanged ? 'yes' : 'no'),
       line('H1 changed', result.difference.h1Changed ? 'yes' : 'no'),
       formatIssues(result.issues),
       `\n${result.note}`,
@@ -46,7 +66,7 @@ export function formatHuman(result) {
     `\n${file.name} · ${file.summary.toUpperCase()}`,
     line('URL', file.url),
     line('HTTP', file.statusCode),
-    ...file.issues.map((issue) => `- ${issue.severity.toUpperCase()}: ${issue.message}`),
+    ...file.issues.map(formatIssue),
   ]);
   return [
     `Prerender Buddy · discovery-file check · ${result.summary.toUpperCase()}`,

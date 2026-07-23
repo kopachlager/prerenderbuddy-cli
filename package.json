@@ -23,25 +23,30 @@
     "LICENSE",
     "NOTICE",
     "README.md",
+    "ROADMAP.md",
     "SECURITY.md"
   ],
   "scripts": {
     "check": "node --check bin/prerenderbuddy.js && node --check src/*.js",
+    "demo:fixture": "node scripts/demo-fixture.js",
     "test": "node --test",
     "test:coverage": "node --test --experimental-test-coverage",
-    "pack:check": "npm pack --dry-run"
+    "pack:check": "node scripts/verify-package.js"
   },
   "engines": {
     "node": ">=20"
   },
   "keywords": [
     "crawler",
+    "technical-seo",
     "javascript-seo",
     "prerendering",
-    "robots.txt",
+    "googlebot",
+    "gptbot",
+    "robots-txt",
     "sitemap",
-    "llms.txt",
-    "cli"
+    "llms-txt",
+    "seo-cli"
   ],
   "license": "Apache-2.0",
   "publishConfig": {

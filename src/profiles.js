@@ -1,6 +1,6 @@
 export const USER_AGENT_PROFILES = Object.freeze({
   browser: {
-    label: 'Browser',
+    label: 'Browser-style user agent',
     value: 'Mozilla/5.0 (compatible; PrerenderBuddyCLI/0.1; +https://prerenderbuddy.com)',
   },
   googlebot: {
