@@ -6,7 +6,7 @@ function fileUrl(siteUrl, pathname) {
   return new URL(pathname, normalizePublicUrl(siteUrl)).toString();
 }
 
-function parseRobots(text) {
+export function parseRobots(text) {
   const sitemapLines = text
     .split(/\r?\n/)
     .map((line) => line.match(/^\s*sitemap\s*:\s*(\S+)\s*$/i)?.[1])
@@ -21,7 +21,7 @@ function parseRobots(text) {
   return { sitemapLines, invalidSitemaps };
 }
 
-function parseSitemap(text, expectedHostname) {
+export function parseSitemap(text, expectedHostname) {
   const locations = [...text.matchAll(/<loc\b[^>]*>([\s\S]*?)<\/loc>/gi)]
     .map((match) => match[1].trim());
   const invalidUrls = [];
@@ -73,6 +73,8 @@ export async function checkDiscoveryFiles(input, options = {}) {
       accept,
       timeoutMs: options.timeoutMs,
       maxChars: 1_000_000,
+      fetchFn: options.fetchFn,
+      assertUrlFn: options.assertUrlFn,
     });
     return [name, response];
   }));
@@ -84,16 +86,32 @@ export async function checkDiscoveryFiles(input, options = {}) {
         severity: name === 'llms.txt' ? 'warning' : 'critical',
         code: 'http_error',
         message: `${name} returned HTTP ${response.statusCode}.`,
+        why: `${name} could not be read successfully at its conventional public URL.`,
+        evidence: { statusCode: response.statusCode, finalUrl: response.finalUrl },
+        nextStep: `Confirm whether ${name} should exist and that its public URL returns the intended file.`,
       });
     }
 
     if (name === 'robots.txt') {
       const details = parseRobots(response.text);
+      if (response.ok && response.contentType && !/(?:text\/plain|text\/robots|application\/octet-stream)/i.test(response.contentType)) {
+        issues.push({
+          severity: 'warning',
+          code: 'unexpected_content_type',
+          message: `robots.txt returned ${response.contentType}.`,
+          why: 'An HTML fallback or unexpected media type can hide a missing robots.txt file.',
+          evidence: { contentType: response.contentType },
+          nextStep: 'Return robots.txt as plain text and verify that the route is not serving an HTML fallback.',
+        });
+      }
       if (details.invalidSitemaps.length) {
         issues.push({
           severity: 'warning',
           code: 'invalid_sitemap_directive',
           message: 'One or more Sitemap directives are not valid absolute HTTP(S) URLs.',
+          why: 'Crawler sitemap directives should resolve without relying on a document base URL.',
+          evidence: { invalidValues: details.invalidSitemaps },
+          nextStep: 'Replace relative or malformed Sitemap values with absolute HTTP(S) URLs.',
         });
       }
       return resultForFile(name, response, details, issues);
@@ -101,11 +119,24 @@ export async function checkDiscoveryFiles(input, options = {}) {
 
     if (name === 'sitemap.xml') {
       const details = parseSitemap(response.text, hostname);
+      if (response.ok && response.contentType && !/(?:application|text)\/(?:[a-z0-9.+-]*\+)?xml/i.test(response.contentType)) {
+        issues.push({
+          severity: 'warning',
+          code: 'unexpected_content_type',
+          message: `sitemap.xml returned ${response.contentType}.`,
+          why: 'An HTML fallback or unexpected media type can hide a missing XML sitemap.',
+          evidence: { contentType: response.contentType },
+          nextStep: 'Return sitemap.xml with an XML content type and verify that the route is not serving an HTML fallback.',
+        });
+      }
       if (response.ok && details.locationCount === 0) {
         issues.push({
           severity: 'warning',
           code: 'no_sitemap_urls',
           message: 'No <loc> URLs were found in sitemap.xml.',
+          why: 'A sitemap without URL locations does not provide discoverable page entries.',
+          evidence: { locationCount: 0 },
+          nextStep: 'Add absolute page URLs or confirm that this is an intentionally empty sitemap index.',
         });
       }
       if (details.invalidUrls.length) {
@@ -113,6 +144,9 @@ export async function checkDiscoveryFiles(input, options = {}) {
           severity: 'warning',
           code: 'invalid_sitemap_urls',
           message: 'One or more sitemap entries are not valid absolute HTTP(S) URLs.',
+          why: 'Relative or malformed sitemap locations may not be interpreted consistently.',
+          evidence: { invalidValues: details.invalidUrls },
+          nextStep: 'Replace invalid <loc> values with absolute HTTP(S) URLs.',
         });
       }
       if (details.otherHosts.length) {
@@ -120,6 +154,9 @@ export async function checkDiscoveryFiles(input, options = {}) {
           severity: 'warning',
           code: 'different_sitemap_host',
           message: 'One or more sitemap entries use a different hostname.',
+          why: 'Cross-host entries may be intentional, but often indicate a staging or canonical-host mismatch.',
+          evidence: { expectedHostname: hostname, otherHostUrls: details.otherHosts },
+          nextStep: 'Confirm that every hostname is intentional and publicly canonical.',
         });
       }
       return resultForFile(name, response, details, issues);
@@ -130,8 +167,34 @@ export async function checkDiscoveryFiles(input, options = {}) {
       hasHeading: /^\s*#\s+\S/m.test(response.text),
       hasLinks: /https?:\/\/\S+/i.test(response.text),
     };
+    if (response.ok && response.contentType && !/(?:text\/plain|text\/markdown)/i.test(response.contentType)) {
+      issues.push({
+        severity: 'warning',
+        code: 'unexpected_content_type',
+        message: `llms.txt returned ${response.contentType}.`,
+        why: 'An HTML fallback or unexpected media type can hide a missing llms.txt file.',
+        evidence: { contentType: response.contentType },
+        nextStep: 'Return llms.txt as plain text or Markdown and verify that the route is not serving an HTML fallback.',
+      });
+    }
     if (response.ok && !response.text.trim()) {
-      issues.push({ severity: 'warning', code: 'empty_llms', message: 'llms.txt is empty.' });
+      issues.push({
+        severity: 'warning',
+        code: 'empty_llms',
+        message: 'llms.txt is empty.',
+        why: 'An empty file provides no project summary or resource references.',
+        evidence: { characterCount: 0 },
+        nextStep: 'Add useful plain-text or Markdown content, or remove the empty file if it is not used.',
+      });
+    } else if (response.ok && !details.hasHeading) {
+      issues.push({
+        severity: 'warning',
+        code: 'llms_missing_heading',
+        message: 'llms.txt does not contain a Markdown H1 heading.',
+        why: 'A primary heading is a basic structural signal for the proposed llms.txt format.',
+        evidence: { hasHeading: false, characterCount: details.characterCount },
+        nextStep: 'Add one clear Markdown H1 heading near the beginning of the file.',
+      });
     }
     return resultForFile(name, response, details, issues);
   });

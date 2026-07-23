@@ -26,6 +26,7 @@ Use Node.js 20 or newer.
 
 ```bash
 npm test
+npm run test:coverage
 npm run check
 npm run pack:check
 ```

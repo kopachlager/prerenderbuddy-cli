@@ -9,6 +9,9 @@ export async function checkUrl(input, options = {}) {
   const response = await fetchPublicText(url, {
     userAgent: profile.value,
     timeoutMs: options.timeoutMs,
+    fetchFn: options.fetchFn,
+    assertUrlFn: options.assertUrlFn,
+    maxChars: options.maxChars,
   });
   const html = analyzeHtml(response.text);
   const issues = buildHtmlIssues(html, response);
@@ -23,6 +26,8 @@ export async function checkUrl(input, options = {}) {
       ok: response.ok,
       finalUrl: response.finalUrl,
       contentType: response.contentType,
+      truncated: response.truncated,
+      maxChars: response.maxChars,
     },
     html,
     issues,

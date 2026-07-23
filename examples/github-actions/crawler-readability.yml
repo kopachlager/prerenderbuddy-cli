@@ -14,26 +14,26 @@ jobs:
     env:
       SITE_URL: https://example.com
     steps:
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
 
       - name: Check crawler-readable HTML
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.1
+          npx --yes @prerenderbuddy/cli@0.1.2
           check "$SITE_URL"
           --user-agent googlebot
           --fail-on critical
 
-      - name: Compare browser and AI crawler responses
+      - name: Compare standard and AI crawler HTTP responses
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.1
+          npx --yes @prerenderbuddy/cli@0.1.2
           compare "$SITE_URL"
           --user-agent gptbot
           --fail-on critical
 
       - name: Validate discovery files
         run: >-
-          npx --yes @prerenderbuddy/cli@0.1.1
+          npx --yes @prerenderbuddy/cli@0.1.2
           files "$SITE_URL"
           --fail-on critical

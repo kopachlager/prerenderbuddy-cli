@@ -4,7 +4,14 @@ const REDIRECT_CODES = new Set([301, 302, 303, 307, 308]);
 const DEFAULT_MAX_CHARS = 500_000;
 
 export async function readBoundedText(response, maxChars = DEFAULT_MAX_CHARS) {
-  if (!response.body) return (await response.text()).slice(0, maxChars);
+  return (await readBoundedResult(response, maxChars)).text;
+}
+
+async function readBoundedResult(response, maxChars = DEFAULT_MAX_CHARS) {
+  if (!response.body) {
+    const text = await response.text();
+    return { text: text.slice(0, maxChars), truncated: text.length > maxChars };
+  }
 
   const decoder = new TextDecoder();
   const reader = response.body.getReader();
@@ -12,7 +19,7 @@ export async function readBoundedText(response, maxChars = DEFAULT_MAX_CHARS) {
   let completed = false;
 
   try {
-    while (output.length < maxChars) {
+    while (output.length <= maxChars) {
       const { done, value } = await reader.read();
       if (done) {
         completed = true;
@@ -21,7 +28,7 @@ export async function readBoundedText(response, maxChars = DEFAULT_MAX_CHARS) {
       output += decoder.decode(value, { stream: true });
     }
     output += decoder.decode();
-    return output.slice(0, maxChars);
+    return { text: output.slice(0, maxChars), truncated: output.length > maxChars };
   } finally {
     if (!completed) await reader.cancel().catch(() => {});
     reader.releaseLock();
@@ -64,13 +71,16 @@ export async function fetchPublicText(target, options = {}) {
     }
 
     if (!REDIRECT_CODES.has(response.status)) {
+      const body = await readBoundedResult(response, maxChars);
       return {
         requestedUrl: normalizePublicUrl(target),
         finalUrl: currentUrl,
         statusCode: response.status,
         ok: response.ok,
         contentType: response.headers.get('content-type') || '',
-        text: await readBoundedText(response, maxChars),
+        text: body.text,
+        truncated: body.truncated,
+        maxChars,
       };
     }
 
@@ -83,6 +93,8 @@ export async function fetchPublicText(target, options = {}) {
         ok: response.ok,
         contentType: response.headers.get('content-type') || '',
         text: '',
+        truncated: false,
+        maxChars,
       };
     }
     if (redirects === maxRedirects) throw new Error('Too many redirects while checking this URL.');
