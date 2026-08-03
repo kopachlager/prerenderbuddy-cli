@@ -4,12 +4,15 @@ import { getUserAgentProfile } from './profiles.js';
 import { normalizePublicUrl } from './url-safety.js';
 
 export function contentDelta(standard, crawler, textRatioThreshold = 0.3) {
+  const bothTextVolumesEmpty = standard.textLength === 0 && crawler.textLength === 0;
   const baseline = Math.max(standard.textLength, 1);
   const minimum = Number((1 - textRatioThreshold).toFixed(2));
   const maximum = Number((1 + textRatioThreshold).toFixed(2));
   return {
     textLength: crawler.textLength - standard.textLength,
-    textRatio: Number((crawler.textLength / baseline).toFixed(2)),
+    textRatio: bothTextVolumesEmpty
+      ? 1
+      : Number((crawler.textLength / baseline).toFixed(2)),
     textRatioThreshold,
     acceptedTextRatio: { minimum, maximum },
     titleChanged: crawler.title !== standard.title,

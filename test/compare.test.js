@@ -72,6 +72,26 @@ test('status differences and crawler app shells remain critical', async () => {
   assert.ok(result.issues.some((issue) => issue.code === 'crawler_app_shell'));
 });
 
+test('treats two empty app-shell responses as equal text volumes', async () => {
+  const appShell = await fixture('thin-app-shell.html');
+  const result = await compareUrl('https://example.com', {
+    userAgent: 'googlebot',
+    assertUrlFn: async () => {},
+    fetchFn: responseQueue(
+      new Response(appShell, { status: 200, headers: { 'content-type': 'text/html' } }),
+      new Response(appShell, { status: 200, headers: { 'content-type': 'text/html' } }),
+    ),
+  });
+
+  assert.equal(result.browser.html.textLength, 0);
+  assert.equal(result.crawler.html.textLength, 0);
+  assert.equal(result.difference.textRatio, 1);
+  assert.equal(result.materiallyDifferent, false);
+  assert.ok(!result.issues.some((issue) => issue.code === 'text_volume_differs'));
+  assert.ok(!result.issues.some((issue) => issue.code === 'crawler_response_differs'));
+  assert.ok(result.issues.some((issue) => issue.code === 'crawler_app_shell'));
+});
+
 test('content delta exposes configured ratio values without semantic comparison', () => {
   const standard = analyzeHtml('<h1>Standard</h1><p>One two three four</p>');
   const crawler = analyzeHtml('<h1>Crawler</h1><p>One two</p>');
