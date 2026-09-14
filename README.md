@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/npm/l/%40prerenderbuddy%2Fcli)](./LICENSE)
 [![Node.js](https://img.shields.io/node/v/%40prerenderbuddy%2Fcli)](./package.json)
 
-Open-source diagnostics for checking what public websites return to crawlers.
+The open-source command-line diagnostics companion to the Prerender Buddy AI visibility and crawler-readiness platform. It checks what public websites return to crawlers.
 
 The CLI inspects returned HTML, compares standard and crawler user-agent HTTP responses, and validates common discovery files. It does not render JavaScript, change a website, require a Prerender Buddy account, or predict search rankings, indexing, AI citations, mentions, or traffic.
 
