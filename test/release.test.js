@@ -6,14 +6,14 @@ async function text(path) {
   return readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 }
 
-test('version and public workflow examples are ready for v0.1.4', async () => {
+test('version and public workflow examples are ready for v0.1.5', async () => {
   const packageJson = JSON.parse(await text('package.json'));
   const packageLock = JSON.parse(await text('package-lock.json'));
   const example = await text('examples/github-actions/crawler-readability.yml');
 
-  assert.equal(packageJson.version, '0.1.4');
-  assert.equal(packageLock.version, '0.1.4');
-  assert.equal(packageLock.packages[''].version, '0.1.4');
+  assert.equal(packageJson.version, '0.1.5');
+  assert.equal(packageLock.version, '0.1.5');
+  assert.equal(packageLock.packages[''].version, '0.1.5');
   assert.equal((example.match(/@prerenderbuddy\/cli@0\.1\.4/g) || []).length, 3);
   assert.doesNotMatch(example, /@prerenderbuddy\/cli@0\.1\.3/);
 });
